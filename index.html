@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>طلباتي</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#1b1f24;--mut:#68727d;--bd:#e0e4e9;--pr:#1f7a9c;--prt:#fff;--ok:#2e8b57;--warn:#b86e0a;--bad:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121416;--card:#1c1f23;--tx:#eef0f2;--mut:#98a2ad;--bd:#2c3036;--pr:#3aa6cc;--prt:#06222d;--ok:#4cc38a;--warn:#e0a040;--bad:#ef7b6d}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121416;--card:#1c1f23;--tx:#eef0f2;--mut:#98a2ad;--bd:#2c3036;--pr:#3aa6cc;--prt:#06222d;--ok:#4cc38a;--warn:#e0a040;--bad:#ef7b6d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.5}
+.w{max-width:640px;margin:0 auto;padding:14px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:22px;margin:0}
+button,.btn{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:var(--pr);color:var(--prt);text-decoration:none;display:inline-block}
+.g{background:transparent;color:var(--tx);border:1px solid var(--bd);padding:6px 10px;font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.st{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+.st small{color:var(--mut);display:block;font-size:12px}
+.st b{font-size:19px}
+.tools{display:flex;gap:8px;margin-bottom:12px}
+input,select,textarea{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+.tools select{width:auto}
+.o{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.oh{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.oh b{font-size:16px}
+.m{color:var(--mut);font-size:14px;margin:4px 0}
+.sum{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;margin:6px 0}
+.rem{color:var(--warn);font-weight:600}
+.paid{color:var(--ok);font-weight:600}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.s{font-size:12px;padding:3px 8px;border-radius:20px;border:1px solid var(--bd);width:auto}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.ov.on{display:flex}
+.sh{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+label{display:block;font-size:14px;margin:10px 0 4px;color:var(--mut)}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.today{border-color:var(--pr)}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="w">
+<div class="top"><h1>طلباتي</h1><div style="display:flex;gap:6px"><button class="g" id="lo" style="display:none">خروج</button><button id="add">+ طلب جديد</button></div></div>
+<div class="m" id="sy" style="margin:-6px 0 10px"></div>
+<div id="sb" class="o" style="display:none;font-size:14px"></div>
+<div class="stats">
+<div class="st"><small>عدد الطلبات</small><b id="sN">0</b></div>
+<div class="st"><small>تسليمات اليوم</small><b id="sT">0</b></div>
+<div class="st"><small>إجمالي المبالغ</small><b id="sA">0 دج</b></div>
+<div class="st"><small>العربون المدفوع</small><b id="sD">0 دج</b></div>
+<div class="st" style="grid-column:1/3"><small>المتبقي للتحصيل</small><b id="sR" class="rem">0 دج</b></div>
+</div>
+<div class="tools"><input id="q" placeholder="ابحث بالاسم أو الهاتف أو نوع الطلب..."><select id="f"></select></div>
+<div id="list"></div>
+</div>
+
+<div class="ov" id="ov"><div class="sh">
+<div class="top"><h1 id="ft">طلب جديد</h1><button class="g" id="x">إغلاق</button></div>
+<label>اسم الزبون</label><input id="n">
+<label>رقم الهاتف</label><input id="p" type="tel" inputmode="tel">
+<label>الولاية والعنوان</label><input id="a">
+<label>نوع الطلب والكمية</label><input id="t">
+<div class="r2"><div><label>المبلغ الإجمالي (دج)</label><input id="m" type="number" inputmode="decimal" value="0"></div>
+<div><label>العربون (دج)</label><input id="d" type="number" inputmode="decimal" value="0"></div></div>
+<div class="r2"><div><label>تاريخ التسليم</label><input id="dt" type="date"></div>
+<div><label>وقت التسليم</label><input id="tm" type="time"></div></div>
+<label>الحالة</label><select id="s"></select>
+<label>ملاحظات</label><textarea id="nt" rows="2"></textarea>
+<p class="m" id="rm"></p>
+<button id="sv" style="width:100%;margin-top:6px">حفظ</button>
+</div></div>
+
+<div class="ov" id="au"><div class="sh">
+<h1>طلباتي</h1><p class="m">سجّل الدخول لتجد طلباتك في أي جهاز.</p>
+<label>البريد الإلكتروني</label><input id="ae" type="email" inputmode="email" autocomplete="email">
+<label>كلمة السر</label><input id="ap" type="password" autocomplete="current-password">
+<p class="m" id="am" style="color:var(--bad)"></p>
+<button id="li" style="width:100%">تسجيل الدخول</button>
+<div class="acts"><button class="g" id="su">إنشاء حساب جديد</button><button class="g" id="fp">نسيت كلمة السر</button></div>
+</div></div>
+<script>
+var FIREBASE_CONFIG={apiKey:"AIzaSyCRiHHLqclaRJA3shJCIEiNMjd_Rb_L7Os",authDomain:"talabati-21f6b.firebaseapp.com",projectId:"talabati-21f6b",appId:"1:274053455216:web:3a5048b5d0cc0b8107c3b5"};
+var OWNER_WA="213698685719";
+var ST=["جديد","قيد التحضير","جاهز","تم التسليم","ملغى"],K="talabati_orders_v1",orders=[],eid=null,pend=null;
+try{orders=JSON.parse(localStorage.getItem(K)||"[]")}catch(e){orders=[]}
+var dbDoc=null,chain=Promise.resolve(),unsub=null,unsub2=null,auth=null,until=null;
+function canW(){return !cfgOk||!!(until&&until>new Date())}
+function subUI(){
+var b=$("sb");if(!cfgOk||!until||!auth||!auth.currentUser){b.style.display="none";return}
+var d=Math.ceil((until-new Date())/864e5),
+wa="https://wa.me/"+OWNER_WA+"?text="+encodeURIComponent("السلام عليكم، أريد تجديد اشتراك طلباتي. بريدي: "+auth.currentUser.email),
+l=' <a href="'+wa+'" target="_blank" rel="noopener">';
+b.style.display="";
+if(d>0){b.innerHTML="الاشتراك ساري: بقي "+d+" يوم"+(d<=5?" ·"+l+"جدّد الآن</a>":"")}
+else{b.innerHTML='<b class="rem">انتهى الاشتراك.</b> بياناتك محفوظة لكن لا يمكن الإضافة أو التعديل.'+l+"تواصل للتجديد</a>"}
+$("add").disabled=d<=0}
+var cfgOk=FIREBASE_CONFIG.apiKey.indexOf("ضع")<0&&typeof firebase!=="undefined";
+function setSync(t){var e=$("sy");if(e)e.textContent=t}
+function save(){
+if(!cfgOk){try{localStorage.setItem(K,JSON.stringify(orders))}catch(e){}return}
+if(dbDoc){var snap=JSON.parse(JSON.stringify(orders));chain=chain.then(function(){return dbDoc.set({list:snap})}).catch(function(){setSync("تعذّرت المزامنة")})}}
+function msgErr(c){var m={"auth/invalid-email":"البريد غير صحيح","auth/weak-password":"كلمة السر ضعيفة (6 أحرف على الأقل)","auth/email-already-in-use":"هذا البريد مستعمل من قبل","auth/invalid-credential":"البريد أو كلمة السر خاطئة","auth/missing-password":"اكتب كلمة السر","auth/network-request-failed":"تحقق من الاتصال بالإنترنت"};return m[c]||"حدث خطأ، حاول مرة أخرى"}
+if(!cfgOk){setSync("⚠️ لم يتم ضبط Firebase بعد: البيانات محفوظة على هذا الجهاز فقط")}
+else{
+orders=[];
+firebase.initializeApp(FIREBASE_CONFIG);
+auth=firebase.auth();var fs=firebase.firestore();
+auth.onAuthStateChanged(function(u){
+if(unsub){unsub();unsub=null}if(unsub2){unsub2();unsub2=null}until=null;subUI();
+dbDoc=null;orders=[];$("lo").style.display=u?"":"none";
+if(!u){$("au").classList.add("on");setSync("");render();return}
+$("au").classList.remove("on");
+var ref=fs.collection("users").doc(u.uid),sref=fs.collection("subs").doc(u.uid);
+unsub2=sref.onSnapshot(function(s){
+if(!s.exists){sref.set({until:firebase.firestore.Timestamp.fromDate(new Date(Date.now()+14*864e5-36e5))}).catch(function(){});return}
+var t=s.data().until;until=t&&t.toDate?t.toDate():null;subUI();render()},function(){});
+unsub=ref.onSnapshot(function(s){
+var d=s.exists?s.data():null;orders=d&&Array.isArray(d.list)?d.list:[];
+dbDoc=ref;setSync("☁️ "+u.email);render()
+},function(){setSync("تعذّرت المزامنة، تحقق من قواعد Firestore")})});
+function go(create){
+var e=$("ae").value.trim(),p=$("ap").value;$("am").textContent="";
+(create?auth.createUserWithEmailAndPassword(e,p):auth.signInWithEmailAndPassword(e,p)).catch(function(er){$("am").textContent=msgErr(er.code)})}
+$("li").onclick=function(){go(false)};$("su").onclick=function(){go(true)};
+$("fp").onclick=function(){var e=$("ae").value.trim();if(!e){$("am").textContent="اكتب بريدك أولا";return}
+auth.sendPasswordResetEmail(e).then(function(){$("am").textContent="تم إرسال رابط إعادة التعيين إلى بريدك"}).catch(function(er){$("am").textContent=msgErr(er.code)})};
+$("lo").onclick=function(){auth.signOut()};
+}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function fmt(n){return (Number(n)||0).toLocaleString("fr-DZ")+" دج"}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function opts(sel,all){return (all?'<option value="">كل الحالات</option>':"")+ST.map(function(s){return '<option'+(s===sel?" selected":"")+'>'+s+'</option>'}).join("")}
+$("f").innerHTML=opts("",true);$("s").innerHTML=opts("جديد");
+function wa(p){p=String(p).replace(/\D/g,"");if(p.indexOf("00")===0)p=p.slice(2);else if(p.charAt(0)==="0")p="213"+p.slice(1);return p}
+function render(){
+var q=$("q").value.trim().toLowerCase(),f=$("f").value,td=today();
+var act=orders.filter(function(o){return o.s!=="ملغى"});
+$("sN").textContent=orders.length;
+$("sT").textContent=act.filter(function(o){return o.dt===td&&o.s!=="تم التسليم"}).length;
+var A=0,D=0;act.forEach(function(o){A+=+o.m||0;D+=+o.d||0});
+$("sA").textContent=fmt(A);$("sD").textContent=fmt(D);$("sR").textContent=fmt(A-D);
+var L=orders.filter(function(o){
+if(f&&o.s!==f)return false;
+return !q||[o.n,o.p,o.t,o.a].join(" ").toLowerCase().indexOf(q)>-1}).sort(function(a,b){return (a.dt||"9")+(a.tm||"")<(b.dt||"9")+(b.tm||"")?-1:1});
+if(!L.length){$("list").innerHTML='<div class="empty">لا توجد طلبات.<br>اضغط «طلب جديد» لإضافة أول طلب.</div>';return}
+$("list").innerHTML=L.map(function(o){
+var r=(+o.m||0)-(+o.d||0),msg="السلام عليكم "+o.n+"، تأكيد طلبك: "+o.t+(o.dt?"\nموعد التسليم: "+o.dt+(o.tm?" على "+o.tm:""):"")+"\nالمبلغ: "+fmt(o.m)+"\nالعربون: "+fmt(o.d)+"\nالمتبقي: "+fmt(r)+"\nشكرا لثقتك.";
+return '<div class="o'+(o.dt===td&&o.s!=="تم التسليم"&&o.s!=="ملغى"?" today":"")+'"><div class="oh"><b>'+esc(o.n)+'</b><select class="s" data-act="st" data-id="'+o.id+'">'+opts(o.s)+'</select></div>'+
+'<div class="m">'+esc(o.t)+(o.a?" · "+esc(o.a):"")+'</div>'+
+'<div class="m">'+(o.dt?"📅 "+esc(o.dt)+(o.tm?" ⏰ "+esc(o.tm):""):"بدون موعد")+(o.p?" · "+esc(o.p):"")+'</div>'+
+(o.nt?'<div class="m">📝 '+esc(o.nt)+'</div>':"")+
+'<div class="sum"><span>الإجمالي: '+fmt(o.m)+'</span><span class="paid">العربون: '+fmt(o.d)+'</span><span class="rem">المتبقي: '+fmt(r)+'</span></div>'+
+'<div class="acts">'+(o.p?'<a class="btn g" target="_blank" rel="noopener" href="https://wa.me/'+wa(o.p)+'?text='+encodeURIComponent(msg)+'">واتساب</a><a class="btn g" href="tel:'+esc(o.p)+'">اتصال</a>':"")+
+'<button class="g" data-act="ed" data-id="'+o.id+'">تعديل</button><button class="g" data-act="rm" data-id="'+o.id+'">'+(pend===o.id?"تأكيد الحذف؟":"حذف")+'</button></div></div>'}).join("")}
+function openF(o){
+eid=o?o.id:null;$("ft").textContent=o?"تعديل الطلب":"طلب جديد";
+$("n").value=o?o.n:"";$("p").value=o?o.p:"";$("a").value=o?o.a:"";$("t").value=o?o.t:"";
+$("m").value=o?o.m:0;$("d").value=o?o.d:0;$("dt").value=o?o.dt:"";$("tm").value=o?o.tm:"";
+$("s").value=o?o.s:"جديد";$("nt").value=o?o.nt:"";calc();$("ov").classList.add("on")}
+function calc(){$("rm").textContent="المتبقي: "+fmt((+$("m").value||0)-(+$("d").value||0))}
+$("m").oninput=calc;$("d").oninput=calc;
+$("add").onclick=function(){if(canW())openF(null)};
+$("x").onclick=function(){$("ov").classList.remove("on")};
+$("sv").onclick=function(){
+if(!canW())return;var n=$("n").value.trim();if(!n){$("n").focus();return}
+var o={id:eid||String(Date.now()),n:n,p:$("p").value.trim(),a:$("a").value.trim(),t:$("t").value.trim(),m:+$("m").value||0,d:+$("d").value||0,dt:$("dt").value,tm:$("tm").value,s:$("s").value,nt:$("nt").value.trim()};
+if(eid){orders=orders.map(function(x){return x.id===eid?o:x})}else{orders.push(o)}
+save();$("ov").classList.remove("on");render()};
+$("list").onclick=function(e){
+var b=e.target.closest("[data-act]");if(!b||!canW())return;var id=b.dataset.id,act=b.dataset.act;
+if(act==="ed"){openF(orders.filter(function(x){return x.id===id})[0])}
+else if(act==="rm"){if(pend===id){orders=orders.filter(function(x){return x.id!==id});pend=null;save()}else{pend=id;setTimeout(function(){pend=null;render()},3000)}render()}};
+$("list").onchange=function(e){
+var b=e.target.closest('[data-act="st"]');if(!b)return;if(!canW()){render();return}
+orders.forEach(function(o){if(o.id===b.dataset.id)o.s=b.value});save();render()};
+$("q").oninput=render;$("f").onchange=render;
+render();
+</script>
+</body>
+</html>
